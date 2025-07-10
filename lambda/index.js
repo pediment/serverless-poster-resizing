@@ -1,55 +1,57 @@
-'use strict';
+import {S3Client, PutObjectCommand, GetObjectCommand} from "@aws-sdk/client-s3";
+import Sharp from "sharp";
 
-const AWS = require('aws-sdk');
-const S3 = new AWS.S3({
-  signatureVersion: 'v4',
-});
-const Sharp = require('sharp');
-
+const s3Client = new S3Client();
 const BUCKET = process.env.BUCKET;
 const URL = process.env.URL;
-const ALLOWED_DIMENSIONS = new Set();
 
-if (process.env.ALLOWED_DIMENSIONS) {
-  const dimensions = process.env.ALLOWED_DIMENSIONS.split(/\s*,\s*/);
-  dimensions.forEach((dimension) => ALLOWED_DIMENSIONS.add(dimension));
-}
-
-exports.handler = function(event, context, callback) {
+export const handler = async (event, context) => {
   const key = event.queryStringParameters.key;
-  const match = key.match(/((\d+)x(\d+))\/(.*)/);
-  const dimensions = match[1];
-  const width = parseInt(match[2], 10);
-  const height = parseInt(match[3], 10);
-  const originalKey = match[4];
+  const match = key.match(/^Posters\/([\d.]+):([\d.]+)\/(.*)$/);
+  const aspectWidth = parseFloat(match[1]);
+  const aspectHeight = parseFloat(match[2]);
+  const aspect = aspectWidth / aspectHeight;
+  const originalKey = `Posters/${match[3]}`;
 
-  if(ALLOWED_DIMENSIONS.size > 0 && !ALLOWED_DIMENSIONS.has(dimensions)) {
-     callback(null, {
-      statusCode: '403',
-      headers: {},
-      body: '',
-    });
-    return;
-  }
-
-  S3.getObject({Bucket: BUCKET, Key: originalKey}).promise()
-    .then(data => Sharp(data.Body)
-      .resize(width, height)
-      .toFormat('png')
-      .toBuffer()
-    )
-    .then(buffer => S3.putObject({
+  const response = await s3Client.send(new GetObjectCommand({Bucket: BUCKET, Key: originalKey}))
+    .then(data => data.Body.transformToByteArray())
+    .then(async data => {
+      const image = new Sharp(data)
+        .jpeg({quality: 100});
+      const { width: originalWidth, height: originalHeight} = await image.metadata();
+      const adjustedWidth = Math.round(originalHeight * aspect);
+      
+      if(adjustedWidth < originalWidth) { // Prefer keeping original height
+        image.resize(adjustedWidth, originalHeight);
+      } else { // Fall back to original width, and use adjusted height
+        const adjustedHeight = Math.round(originalWidth / aspect);
+        image.resize(originalWidth, adjustedHeight);
+      }
+        
+      return image.toBuffer();
+    })
+    .then(buffer => s3Client.send(new PutObjectCommand({
         Body: buffer,
         Bucket: BUCKET,
-        ContentType: 'image/png',
+        ContentType: 'image/jpeg',
         Key: key,
-      }).promise()
+      }))
     )
-    .then(() => callback(null, {
-        statusCode: '301',
-        headers: {'location': `${URL}/${key}`},
+    .then((resp) => {
+      return {
+        statusCode: 301,
+        headers: {'Location': `${URL}/${key}`},
         body: '',
-      })
-    )
-    .catch(err => callback(err))
-}
+      };
+    })
+    .catch(err => {
+      console.error(err);
+      return {
+        statusCode: 500,
+        headers: {},
+        body: err,
+      };
+    });
+
+  return response;
+};

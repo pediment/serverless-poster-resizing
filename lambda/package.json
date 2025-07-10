@@ -1,15 +1,16 @@
 {
-  "name": "image-resize",
+  "name": "poster-resize",
   "version": "1.0.0",
-  "description": "Serverless image resizing",
-  "readme": "Serverless image resizing",
-  "repository": "https://github.com/awslabs/serverless-image-resizing",
+  "description": "Serverless poster resizing",
+  "readme": "Serverless poster resizing",
+  "repository": "https://github.com/pediment/serverless-poster-resizing",
   "license": "Apache-2.0",
   "main": "index.js",
+  "type": "module",
   "dependencies": {
-    "sharp": "^0.17.3"
+    "sharp": "^0.32.6"
   },
   "devDependencies": {
-    "aws-sdk": "^2.36.0"
+    "aws-sdk": "^2.1529.0"
   }
 }
