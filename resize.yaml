@@ -1,72 +1,60 @@
-AWSTemplateFormatVersion: 2010-09-09
-
+# This AWS SAM template has been generated from your function's configuration. If
+# your function has one or more triggers, note that the AWS resources associated
+# with these triggers aren't fully specified in this template and include
+# placeholder values. Open this template in AWS Infrastructure Composer or your
+# favorite IDE and modify it to specify a serverless application with other AWS
+# resources.
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-
+Description: An AWS Serverless Application Model template describing your function.
 Resources:
-  Api:
-    Type: AWS::Serverless::Api
-    Properties:
-      DefinitionUri: ./deploy/api.yaml
-      StageName: prod
-      Variables:
-        LambdaFunctionName: !Ref ResizeFunction
-
-  ImageBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    Properties:
-      AccessControl: PublicRead
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        RoutingRules:
-          - RedirectRule:
-              HttpRedirectCode: 307
-              HostName: !Sub ${Api}.execute-api.${AWS::Region}.amazonaws.com
-              Protocol: https
-              ReplaceKeyPrefixWith: prod?key=
-            RoutingRuleCondition:
-              HttpErrorCodeReturnedEquals: 404
-
-  ResizeFunction:
+  resize:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./dist/function.zip
-      Handler: index.handler
-      Runtime: nodejs6.10
+      CodeUri: .
+      Description: ''
       MemorySize: 1536
-      Timeout: 60
+      Timeout: 10
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      EphemeralStorage:
+        Size: 512
       Environment:
         Variables:
-          BUCKET: !Ref ImageBucket
-          URL: !GetAtt ImageBucket.WebsiteURL
+          BUCKET: pediment-pod
+          URL: http://pediment-pod.s3-website-us-east-1.amazonaws.com
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 21600
+        MaximumRetryAttempts: 2
+      PackageType: Zip
       Policies:
-          Statement:
-            - Resource: !Sub arn:aws:s3:::${ImageBucket}/*
+        - Statement:
+            - Sid: VisualEditor0
               Effect: Allow
               Action:
                 - s3:PutObject
-
-  ResizeFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref ResizeFunction
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/*
-
-  ImageBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref ImageBucket
-      PolicyDocument:
-        Statement:
-          - Action: s3:GetObject
-            Effect: Allow
-            Principal: "*"
-            Resource: !Sub arn:aws:s3:::${ImageBucket}/*
-
-Outputs:
-  BucketWebsiteUrl:
-    Value: !GetAtt ImageBucket.WebsiteURL
-  Bucket:
-    Value: !Ref ImageBucket
+              Resource: arn:aws:s3:::pediment-pod/*.jpg
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+              Resource: arn:aws:logs:us-east-1:312702121860:*
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource:
+                - >-
+                  arn:aws:logs:us-east-1:312702121860:log-group:/aws/lambda/resize:*
+      RecursiveLoop: Terminate
+      SnapStart:
+        ApplyOn: None
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /resize
+            Method: ANY
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: Auto
