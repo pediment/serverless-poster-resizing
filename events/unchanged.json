@@ -1,0 +1,44 @@
+{
+    "version": "2.0",
+    "routeKey": "ANY /resize",
+    "rawPath": "/default/resize",
+    "rawQueryString": "key=Posters/MiamiDolphins1972PerfectSeason-Poster-HQ.jpg",
+    "headers": {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-encoding": "gzip, deflate, br",
+        "accept-language": "en-US,en;q=0.9",
+        "content-length": "0",
+        "host": "ltgchi86r4.execute-api.us-east-1.amazonaws.com",
+        "priority": "u=0, i",
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+        "x-amzn-trace-id": "Root=1-6812719f-25d555e81fc17e7821b405ef",
+        "x-forwarded-for": "172.225.80.240",
+        "x-forwarded-port": "443",
+        "x-forwarded-proto": "https"
+    },
+    "queryStringParameters": {
+        "key": "Posters/MiamiDolphins1972PerfectSeason-Poster-HQ.jpg"
+    },
+    "requestContext": {
+        "accountId": "312702121860",
+        "apiId": "ltgchi86r4",
+        "domainName": "ltgchi86r4.execute-api.us-east-1.amazonaws.com",
+        "domainPrefix": "ltgchi86r4",
+        "http": {
+            "method": "GET",
+            "path": "/default/resize",
+            "protocol": "HTTP/1.1",
+            "sourceIp": "172.225.80.240",
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15"
+        },
+        "requestId": "J2aw7h6DIAMEJqQ=",
+        "routeKey": "ANY /resize",
+        "stage": "default",
+        "time": "30/Apr/2025:18:53:19 +0000",
+        "timeEpoch": 1746039199128
+    },
+    "isBase64Encoded": false
+}
