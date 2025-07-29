@@ -4,6 +4,7 @@ import Sharp from "sharp";
 const s3Client = new S3Client();
 const BUCKET = process.env.BUCKET;
 const URL = process.env.URL;
+const CANVAS_DPI = 200; // Default DPI for resizing
 
 const extractParams = (queryString) => {
   let params = {...queryString},
@@ -46,22 +47,21 @@ const trim = async (image, opts={}) => {
 
   if (canvasBleed && aspectWidth && aspectHeight) {
     const bleedPercentage = parseInt(canvasBleed) / Math.min(originalWidth, originalHeight);
-    const dpi = 200; // Target DPI for final image
     const bleedInches = 1.875;
     const targetBleedPercentage = bleedInches / Math.min(aspectWidth, aspectHeight);
 
     // If the expected bleed percentage is greater than what we have return the original image
     // which will likely result in an error when submitting to Lumaprints
-    if (targetBleedPercentage > bleedPercentage) return image;
+    if (targetBleedPercentage > bleedPercentage) throw new Error('Insufficient canvas bleed');
 
     const scale = Math.min(
-      originalWidth / (parseFloat(aspectWidth) * dpi),
-      originalHeight / (parseFloat(aspectHeight) * dpi)
+      originalWidth / (parseFloat(aspectWidth) * CANVAS_DPI),
+      originalHeight / (parseFloat(aspectHeight) * CANVAS_DPI)
     )
 
     // Scale all target dimensions back to original image scale
-    const scaledFinalWidth = Math.round(aspectWidth * dpi * scale);
-    const scaledFinalHeight = Math.round(aspectHeight * dpi * scale);
+    const scaledFinalWidth = Math.round(aspectWidth * CANVAS_DPI * scale);
+    const scaledFinalHeight = Math.round(aspectHeight * CANVAS_DPI * scale);
 
     // Calculate crop offsets to center the content in the original image
     const leftOffset = Math.max(0, Math.round((originalWidth - scaledFinalWidth) / 2));
@@ -84,6 +84,16 @@ const trim = async (image, opts={}) => {
 
 const resize = async (image, opts={}) => {
   const { aspectRatio, canvasBleed, aspectWidth, aspectHeight } = opts;
+
+  // Canvas with bleed, resize to actual output dimensions and return
+  if ( canvasBleed ) {
+    return image.resize(
+      Math.round(aspectWidth * CANVAS_DPI),
+      Math.round(aspectHeight * CANVAS_DPI)
+    );
+  }
+
+  // Continue with aspect ratio resizing
   const { width: originalWidth, height: originalHeight} = await image.metadata();
   const adjustedWidth = Math.round(originalHeight * aspectRatio);
   
@@ -93,7 +103,7 @@ const resize = async (image, opts={}) => {
     const adjustedHeight = Math.round(originalWidth / aspectRatio);
     image.resize(originalWidth, adjustedHeight);
   }
-    
+
   return image;
 };
 
@@ -122,13 +132,12 @@ export const handler = async (event, context) => {
         Key: key,
       }))
     )
-    .then((resp) => redirect)
+    .then(resp => redirect)
     .catch(err => {
-      console.error(err);
       return {
         statusCode: 500,
         headers: {},
-        body: err,
+        body: err.message,
       };
     });
 
