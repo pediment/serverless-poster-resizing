@@ -4,7 +4,7 @@ import Sharp from "sharp";
 const s3Client = new S3Client();
 const BUCKET = process.env.BUCKET;
 const URL = process.env.URL;
-const CANVAS_DPI = 200; // Default DPI for resizing
+const CANVAS_DPI = 300; // DPI for resizing
 
 const extractParams = (queryString) => {
   let params = {...queryString},
@@ -12,23 +12,29 @@ const extractParams = (queryString) => {
       prefix,
       aspectWidth,
       aspectHeight,
+      canvasWrap,
       canvasBleed,
       originalKey;
   
-  // If the key includes a canvas bleed, extract it
-  if (match = params.key.match(/^(Posters)\/([\d.]+):([\d.]+)\/canvas\/\+(\d+)\/(.*)$/)) {
-    [ prefix, aspectWidth, aspectHeight, canvasBleed, originalKey ] = match.slice(1);
+  // If the key includes canvas bleed info, extract it
+  // Example format: Posters/12:18/canvas/1.875/+1400/OriginalKey.jpg
+  if (match = params.key.match(/^(Posters)\/([\d.]+):([\d.]+)\/canvas\/([\d.]+)\/\+(\d+)\/(.*)$/)) {
+    [ prefix, aspectWidth, aspectHeight, canvasWrap, canvasBleed, originalKey ] = match.slice(1);
+    aspectWidth = parseFloat(aspectWidth) + (canvasWrap * 2);
+    aspectHeight = parseFloat(aspectHeight) + (canvasWrap * 2);
 
   // Extract aspect ratio and original key
+  // Example format: Posters/12:18/OriginalKey.jpg
   } else if (match = params.key.match(/^(Posters)\/([\d.]+):([\d.]+)\/(.*)$/)) {
     [ prefix, aspectWidth, aspectHeight, originalKey ] = match.slice(1);
 
   // Pass through the original key
+  // Example format: Posters/OriginalKey.jpg
   } else {
     [ prefix, originalKey ] = params.key.split('/');
   }
 
-  params = { ...params, canvasBleed, originalKey: `${prefix}/${originalKey}` };
+  params = { ...params, canvasWrap, canvasBleed, originalKey: `${prefix}/${originalKey}` };
   if (aspectWidth && aspectHeight) {
     params = {
       ...params,
@@ -42,12 +48,10 @@ const extractParams = (queryString) => {
 };
 
 const trim = async (image, opts={}) => {
-  const { canvasBleed, aspectWidth, aspectHeight } = opts;
+  const { canvasWrap, canvasBleed, aspectWidth, aspectHeight } = opts;
   const { width: originalWidth, height: originalHeight} = await image.metadata();
 
-  if (canvasBleed && aspectWidth && aspectHeight) {
-    const bleedInches = 1.875;
-
+  if (canvasWrap && canvasBleed && aspectWidth && aspectHeight) {
     const scale = Math.min(
       originalWidth / (parseFloat(aspectWidth) * CANVAS_DPI),
       originalHeight / (parseFloat(aspectHeight) * CANVAS_DPI)
@@ -56,7 +60,7 @@ const trim = async (image, opts={}) => {
     // Scale all target dimensions back to original image scale
     const scaledFinalWidth = Math.round(aspectWidth * CANVAS_DPI * scale);
     const scaledFinalHeight = Math.round(aspectHeight * CANVAS_DPI * scale);
-    const scaledBleed = Math.round(bleedInches * CANVAS_DPI * scale);
+    const scaledBleed = Math.round(canvasWrap * CANVAS_DPI * scale);
 
     // Calculate crop offsets to center the content in the original image
     const leftOffset = Math.max(0, Math.round((originalWidth - scaledFinalWidth) / 2));
