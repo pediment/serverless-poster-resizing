@@ -46,13 +46,7 @@ const trim = async (image, opts={}) => {
   const { width: originalWidth, height: originalHeight} = await image.metadata();
 
   if (canvasBleed && aspectWidth && aspectHeight) {
-    const bleedPercentage = parseInt(canvasBleed) / Math.min(originalWidth, originalHeight);
     const bleedInches = 1.875;
-    const targetBleedPercentage = bleedInches / Math.min(aspectWidth, aspectHeight);
-
-    // If the expected bleed percentage is greater than what we have return the original image
-    // which will likely result in an error when submitting to Lumaprints
-    if (targetBleedPercentage > bleedPercentage) throw new Error('Insufficient canvas bleed');
 
     const scale = Math.min(
       originalWidth / (parseFloat(aspectWidth) * CANVAS_DPI),
@@ -62,13 +56,16 @@ const trim = async (image, opts={}) => {
     // Scale all target dimensions back to original image scale
     const scaledFinalWidth = Math.round(aspectWidth * CANVAS_DPI * scale);
     const scaledFinalHeight = Math.round(aspectHeight * CANVAS_DPI * scale);
+    const scaledBleed = Math.round(bleedInches * CANVAS_DPI * scale);
 
     // Calculate crop offsets to center the content in the original image
     const leftOffset = Math.max(0, Math.round((originalWidth - scaledFinalWidth) / 2));
     const topOffset = Math.max(0, Math.round((originalHeight - scaledFinalHeight) / 2));
 
-    // If the offsets exceed the canvas bleed, return the original image
-    if (Math.max(leftOffset, topOffset) > canvasBleed) return image; 
+    // Calculate the bleed used based on the offsets and scaled bleed
+    // Throw an error if the bleed is insufficient
+    const remainingBleed = canvasBleed - scaledBleed - Math.max(leftOffset, topOffset);
+    if(remainingBleed <= 0) throw new Error('Insufficient canvas bleed');
     
     // Extract the cropped region from the original image
     image.extract({
