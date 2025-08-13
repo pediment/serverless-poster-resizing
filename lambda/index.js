@@ -44,40 +44,54 @@ const extractParams = (queryString) => {
     };
   }
 
+  // Log extracted parameters
+  console.debug(` Extracted parameters: ${JSON.stringify(params)}`);
+
   return params;
 };
 
 const trim = async (image, opts={}) => {
-  const { canvasWrap, canvasBleed, aspectWidth, aspectHeight } = opts;
+  let  { canvasWrap, canvasBleed, aspectWidth: outputWidth, aspectHeight: outputHeight } = opts;
   const { width: originalWidth, height: originalHeight} = await image.metadata();
 
-  if (canvasWrap && canvasBleed && aspectWidth && aspectHeight) {
-    const scale = Math.min(
-      originalWidth / (parseFloat(aspectWidth) * CANVAS_DPI),
-      originalHeight / (parseFloat(aspectHeight) * CANVAS_DPI)
-    )
+  if (canvasWrap && canvasBleed && outputWidth && outputHeight) {
+    // Convert inches to pixels
+    outputWidth = outputWidth * CANVAS_DPI;
+    outputHeight = outputHeight * CANVAS_DPI;
+    canvasWrap = canvasWrap * CANVAS_DPI;
+
+    // Calculate face dimensions
+    const faceWidth = originalWidth - ( canvasBleed * 2 );
+    const faceHeight = originalHeight - ( canvasBleed * 2 );
+    const outputFaceWidth = outputWidth - ( canvasWrap * 2 );
+    const outputFaceHeight = outputHeight - ( canvasWrap * 2 );
+
+    // Calculate scale
+    const scale = Math.max(Math.min(
+      faceWidth / outputFaceWidth,
+      faceHeight / outputFaceHeight
+    ), 1);
 
     // Scale all target dimensions back to original image scale
-    const scaledFinalWidth = Math.round(aspectWidth * CANVAS_DPI * scale);
-    const scaledFinalHeight = Math.round(aspectHeight * CANVAS_DPI * scale);
-    const scaledBleed = Math.round(canvasWrap * CANVAS_DPI * scale);
+    const scaledWidth = Math.round(outputWidth * scale);
+    const scaledHeight = Math.round(outputHeight * scale);
 
     // Calculate crop offsets to center the content in the original image
-    const leftOffset = Math.max(0, Math.round((originalWidth - scaledFinalWidth) / 2));
-    const topOffset = Math.max(0, Math.round((originalHeight - scaledFinalHeight) / 2));
+    const leftOffset = Math.round((originalWidth - scaledWidth) / 2);
+    const topOffset = Math.round((originalHeight - scaledHeight) / 2)
 
-    // Calculate the bleed used based on the offsets and scaled bleed
     // Throw an error if the bleed is insufficient
-    const remainingBleed = canvasBleed - scaledBleed - Math.max(leftOffset, topOffset);
-    if(remainingBleed <= 0) throw new Error('Insufficient canvas bleed');
-    
+    if(Math.min(leftOffset, topOffset) <= 0) throw new Error('Insufficient canvas bleed');
+
     // Extract the cropped region from the original image
-    image.extract({
+    const params = {
       left: leftOffset,
       top: topOffset,
-      width: scaledFinalWidth,
-      height: scaledFinalHeight
-    });
+      width: scaledWidth,
+      height: scaledHeight
+    };
+    console.debug(` Extraction parameters: ${JSON.stringify(params)}`);
+    image.extract(params);
   }
 
   return image;
@@ -85,25 +99,36 @@ const trim = async (image, opts={}) => {
 
 const resize = async (image, opts={}) => {
   const { aspectRatio, canvasBleed, aspectWidth, aspectHeight } = opts;
+  let outputWidth, outputHeight;
 
   // Canvas with bleed, resize to actual output dimensions and return
   if ( canvasBleed ) {
-    return image.resize(
-      Math.round(aspectWidth * CANVAS_DPI),
-      Math.round(aspectHeight * CANVAS_DPI)
-    );
+    outputWidth = Math.round(aspectWidth * CANVAS_DPI);
+    outputHeight = Math.round(aspectHeight * CANVAS_DPI);
+    
+  // Continue with aspect ratio resizing
+  } else {
+    const { width: originalWidth, height: originalHeight} = await image.metadata();
+    const adjustedWidth = Math.round(originalHeight * aspectRatio);
+    
+    if ( adjustedWidth < originalWidth ) { // Prefer keeping original height
+      outputWidth = adjustedWidth;
+      outputHeight = originalHeight;
+    } else { // Fall back to original width, and use adjusted height
+      outputWidth = originalWidth;
+      outputHeight = Math.round(originalWidth / aspectRatio);
+    }
   }
 
-  // Continue with aspect ratio resizing
-  const { width: originalWidth, height: originalHeight} = await image.metadata();
-  const adjustedWidth = Math.round(originalHeight * aspectRatio);
   
-  if ( adjustedWidth < originalWidth ) { // Prefer keeping original height
-    image.resize(adjustedWidth, originalHeight);
-  } else { // Fall back to original width, and use adjusted height
-    const adjustedHeight = Math.round(originalWidth / aspectRatio);
-    image.resize(originalWidth, adjustedHeight);
-  }
+  // Resize the image to output dimensions, but prevent enlargement
+  const params = {
+    width: outputWidth,
+    height: outputHeight,
+    withoutEnlargement: true
+  };
+  console.debug(` Resizing parameters: ${JSON.stringify(params)}`);
+  image.resize(params);
 
   return image;
 };
@@ -114,12 +139,14 @@ export const handler = async (event, context) => {
   const redirect = {
     statusCode: 301,
     headers: {'Location': `${URL}/${key}`},
-    body: '',
+    body: `Redirecting to ${URL}/${key}`,
   };
 
   // If no aspect ratio is provided, redirect to the original key as there is no resizing needed
   if( !params.aspectRatio ) return redirect;
-  
+
+  console.debug(` Processing '${params.key}'...`);
+
   const response = await s3Client.send(new GetObjectCommand({Bucket: BUCKET, Key: originalKey}))
     .then(data => data.Body.transformToByteArray())
     .then(buffer => new Sharp(buffer).jpeg({quality: 100}))
