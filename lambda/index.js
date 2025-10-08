@@ -6,7 +6,7 @@ const BUCKET = process.env.BUCKET;
 const URL = process.env.URL;
 const CANVAS_DPI = 300; // DPI for resizing
 
-const extractParams = (queryString) => {
+export const extractParams = (queryString) => {
   let params = {...queryString},
       match,
       prefix,
@@ -16,16 +16,22 @@ const extractParams = (queryString) => {
       canvasBleed,
       originalKey;
   
-  // If the key includes canvas bleed info, extract it
-  // Example format: Posters/12:18/canvas/1.875/+1400/OriginalKey.jpg
-  if (match = params.key.match(/^(Posters)\/([\d.]+):([\d.]+)\/canvas\/([\d.]+)\/\+(\d+)\/(.*)$/)) {
-    [ prefix, aspectWidth, aspectHeight, canvasWrap, canvasBleed, originalKey ] = match.slice(1);
+  // If the key includes canvas size and bleed info, extract it
+  // Example format: Posters/12:18/canvas/1.5/+1400/OriginalKey.jpg
+  if (match = params.key.match(/^(Posters)\/(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)\/canvas\/(\d+(?:\.\d+)?)\/\+(\d+)\/(.*)$/)) {
+    [ prefix, aspectWidth, aspectHeight, canvasSize, canvasBleed, originalKey ] = match.slice(1);
+    switch(canvasSize) {
+      case '0.75': canvasWrap = 1; break;
+      case '1.25': canvasWrap = 1.875; break;
+      case '1.5': canvasWrap = 2; break;
+      default: canvasWrap = 0; break;
+    }
     aspectWidth = parseFloat(aspectWidth) + (canvasWrap * 2);
     aspectHeight = parseFloat(aspectHeight) + (canvasWrap * 2);
 
   // Extract aspect ratio and original key
   // Example format: Posters/12:18/OriginalKey.jpg
-  } else if (match = params.key.match(/^(Posters)\/([\d.]+):([\d.]+)\/(.*)$/)) {
+  } else if (match = params.key.match(/^(Posters)\/(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)\/(.*)$/)) {
     [ prefix, aspectWidth, aspectHeight, originalKey ] = match.slice(1);
 
   // Pass through the original key
@@ -50,7 +56,7 @@ const extractParams = (queryString) => {
   return params;
 };
 
-const trim = async (image, opts={}) => {
+export const trim = async (image, opts={}) => {
   let  { canvasWrap, canvasBleed, aspectWidth: outputWidth, aspectHeight: outputHeight } = opts;
   const { width: originalWidth, height: originalHeight} = await image.metadata();
 
@@ -97,7 +103,7 @@ const trim = async (image, opts={}) => {
   return image;
 };
 
-const resize = async (image, opts={}) => {
+export const resize = async (image, opts={}) => {
   const { aspectRatio, canvasBleed, aspectWidth, aspectHeight } = opts;
   let outputWidth, outputHeight;
 
