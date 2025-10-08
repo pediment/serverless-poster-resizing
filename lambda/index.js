@@ -15,7 +15,7 @@ export const extractParams = (queryString) => {
       canvasWrap,
       canvasBleed,
       originalKey;
-  
+
   // If the key includes canvas size and bleed info, extract it
   // Example format: Posters/12:18/canvas/1.5/+1400/OriginalKey.jpg
   if (match = params.key.match(/^(Posters)\/(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)\/canvas\/(\d+(?:\.\d+)?)\/\+(\d+)\/(.*)$/)) {
@@ -111,12 +111,12 @@ export const resize = async (image, opts={}) => {
   if ( canvasBleed ) {
     outputWidth = Math.round(aspectWidth * CANVAS_DPI);
     outputHeight = Math.round(aspectHeight * CANVAS_DPI);
-    
+
   // Continue with aspect ratio resizing
   } else {
     const { width: originalWidth, height: originalHeight} = await image.metadata();
     const adjustedWidth = Math.round(originalHeight * aspectRatio);
-    
+
     if ( adjustedWidth < originalWidth ) { // Prefer keeping original height
       outputWidth = adjustedWidth;
       outputHeight = originalHeight;
@@ -126,7 +126,6 @@ export const resize = async (image, opts={}) => {
     }
   }
 
-  
   // Resize the image to output dimensions, but prevent enlargement
   const params = {
     width: outputWidth,
