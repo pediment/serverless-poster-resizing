@@ -67,14 +67,26 @@ The function supports multiple URL formats:
 
 2. Deploy to AWS Lambda
 
-   You can deploy using AWS SAM or manually upload the `dist/function.zip` to your Lambda function.
+   **To deploy code updates:**
+   ```bash
+   bin/deploy
+   ```
+   This builds the distribution package and updates the Lambda function code.
+   
+   Set environment variables to customize:
+   - `FUNCTION_NAME` - Lambda function name (default: `resize`)
+   - `AWS_REGION` - AWS region (default: from AWS CLI config)
+
+   **Manual upload:**
+   
+   You can also manually upload `dist/function.zip` through the AWS Lambda console if preferred.
 
    **For local testing with SAM:**
    ```bash
    sam local start-lambda --template-file resize.yaml
    ```
 
-   **Environment variables required:**
+   **Environment variables required (set in Lambda console):**
    - `BUCKET` - S3 bucket name where images are stored
    - `URL` - Base URL for the S3 bucket website
 
@@ -94,6 +106,19 @@ The function supports multiple URL formats:
 - **Image DPI:** 300 DPI for canvas calculations
 - **Image Format:** Output as JPEG with 100% quality
 - **Scaling:** Never enlarges images, only scales down or maintains original size
+
+## Infrastructure
+
+The API Gateway configuration is documented in `api-gateway.yaml`. This file is an export of the 
+API Gateway setup and serves as:
+- Documentation of the API Gateway integration
+- Backup of the API configuration
+- Reference for recreating or troubleshooting the API setup
+
+The infrastructure consists of:
+- **S3 Bucket** - Static website hosting with redirection rules
+- **Lambda Function** - Image processing (this repository)
+- **API Gateway** - REST API endpoint that triggers the Lambda function
 
 ## License
 

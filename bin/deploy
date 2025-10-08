@@ -1,33 +1,43 @@
 #!/bin/bash
+#
+# Update only the Lambda function code
+# Use this for regular deployments when infrastructure already exists
+#
 
 set -o errexit
+set -o nounset
+set -o pipefail
 
-stack_name=ServerlessImageResize
-region="$(aws configure get region)"
-bucket_name="temp-serverless-resize-$(openssl rand -hex 8)"
-account_id="$(aws sts get-caller-identity --query Account --output text \
-  | xargs echo -n | tr -d '\r')"
+FUNCTION_NAME="${FUNCTION_NAME:-resize}"
+REGION="${AWS_REGION:-$(aws configure get region)}"
 
-set -o xtrace
+echo "Updating Lambda function: ${FUNCTION_NAME}"
+echo "Region: ${REGION}"
+echo ""
 
-sed -e "s/REGION/${region}/g" -e "s/ACCOUNT_ID/${account_id}/g" \
-  api-template.yaml > deploy/api.yaml
+# Build the Lambda function
+echo "Building Lambda function..."
+make dist
 
-aws s3 mb "s3://${bucket_name}"
+# Update Lambda function code
+echo "Uploading new code..."
+aws lambda update-function-code \
+  --function-name "${FUNCTION_NAME}" \
+  --zip-file fileb://dist/function.zip \
+  --region "${REGION}"
 
-aws cloudformation package \
-  --output-template-file=deploy/output.yaml \
-  --template-file=image-resize.yaml \
-  --s3-bucket="${bucket_name}" \
+echo ""
+echo "Waiting for update to complete..."
+aws lambda wait function-updated \
+  --function-name "${FUNCTION_NAME}" \
+  --region "${REGION}"
 
-aws cloudformation deploy \
-  --template-file=deploy/output.yaml \
-  --stack-name="${stack_name}" \
-  --capabilities=CAPABILITY_NAMED_IAM
-
-aws s3 rb --force "s3://${bucket_name}"
-
-aws cloudformation describe-stacks \
-  --stack-name "${stack_name}" \
-  --query Stacks[].Outputs \
+echo ""
+echo "Lambda function updated successfully!"
+echo ""
+echo "Function details:"
+aws lambda get-function \
+  --function-name "${FUNCTION_NAME}" \
+  --region "${REGION}" \
+  --query 'Configuration.[FunctionName, Runtime, LastModified, CodeSize]' \
   --output table
