@@ -13,7 +13,7 @@ Resources:
     Properties:
       CodeUri: .
       Description: ''
-      MemorySize: 1536
+      MemorySize: 2048
       Timeout: 10
       Handler: index.handler
       Runtime: nodejs22.x

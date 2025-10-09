@@ -12,6 +12,7 @@ export const extractParams = (queryString) => {
       prefix,
       aspectWidth,
       aspectHeight,
+      canvasSize,
       canvasWrap,
       canvasBleed,
       originalKey;
@@ -154,7 +155,7 @@ export const handler = async (event, context) => {
 
   const response = await s3Client.send(new GetObjectCommand({Bucket: BUCKET, Key: originalKey}))
     .then(data => data.Body.transformToByteArray())
-    .then(buffer => new Sharp(buffer).jpeg({quality: 100}))
+    .then(buffer => Sharp(buffer).jpeg({quality: 100}))
     .then(image => trim(image, params))
     .then(image => resize(image, params))
     .then(image => image.toBuffer())
