@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Update only the Lambda function code
-# Use this for regular deployments when infrastructure already exists
+# Deploy Lambda function code to staging
+# Uploads code to $LATEST (staging alias points to $LATEST)
 #
 
 set -o errexit
@@ -11,7 +11,8 @@ set -o pipefail
 FUNCTION_NAME="${FUNCTION_NAME:-resize}"
 REGION="${AWS_REGION:-$(aws configure get region)}"
 
-echo "Updating Lambda function: ${FUNCTION_NAME}"
+echo "Deploying to staging (\$LATEST)..."
+echo "Function: ${FUNCTION_NAME}"
 echo "Region: ${REGION}"
 echo ""
 
@@ -19,25 +20,30 @@ echo ""
 echo "Building Lambda function..."
 make dist
 
-# Update Lambda function code
-echo "Uploading new code..."
+# Update $LATEST
+echo "Uploading new code to \$LATEST..."
 aws lambda update-function-code \
   --function-name "${FUNCTION_NAME}" \
   --zip-file fileb://dist/function.zip \
-  --region "${REGION}"
+  --region "${REGION}" \
+  --output json > /dev/null
 
-echo ""
 echo "Waiting for update to complete..."
 aws lambda wait function-updated \
   --function-name "${FUNCTION_NAME}" \
   --region "${REGION}"
 
 echo ""
-echo "Lambda function updated successfully!"
+echo "✓ Code uploaded successfully to \$LATEST"
+
+# Get git info for display
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+
 echo ""
-echo "Function details:"
-aws lambda get-function \
-  --function-name "${FUNCTION_NAME}" \
-  --region "${REGION}" \
-  --query 'Configuration.[FunctionName, Runtime, LastModified, CodeSize]' \
-  --output table
+echo "Staging is ready to test:"
+echo "  Branch: ${GIT_BRANCH}"
+echo "  Commit: ${GIT_COMMIT}"
+echo "  URL: https://ltgchi86r4.execute-api.us-east-1.amazonaws.com/default/staging/resize"
+echo ""
+echo "To promote to production: bin/promote"

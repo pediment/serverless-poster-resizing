@@ -1,16 +1,16 @@
-.PHONY: all image package dist clean
+.PHONY: all build dist clean
 
-all: package
+all: dist
 
-image:
-	docker build --tag amazonlinux:nodejs .
+build:
+	sam build resize -t resize.yaml -s lambda/ --use-container
 
-package: image
-	docker run --rm --volume ${PWD}/lambda:/build amazonlinux:nodejs npm install --production
-
-dist: package
-	cd lambda && zip -FS -q -r ../dist/function.zip *
+dist: build
+	mkdir -p dist
+	cp -r .aws-sam/build/resize/. dist/build-temp/
+	cd dist/build-temp && zip -FS -q -r ../function.zip .
+	rm -rf dist/build-temp
 
 clean:
-	rm -r lambda/node_modules
-	docker rmi --force amazonlinux:nodejs
+	rm -rf .aws-sam dist
+	rm -rf lambda/node_modules

@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# Promote staging to production
+# Publishes $LATEST as a new version and updates production alias
+#
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+FUNCTION_NAME="${FUNCTION_NAME:-resize}"
+REGION="${AWS_REGION:-$(aws configure get region)}"
+
+echo "Promoting staging (\$LATEST) to production..."
+echo "Function: ${FUNCTION_NAME}"
+echo "Region: ${REGION}"
+echo ""
+
+# Get current production version
+PRODUCTION_VERSION=$(aws lambda get-alias \
+  --function-name "${FUNCTION_NAME}" \
+  --name "production" \
+  --region "${REGION}" \
+  --query 'FunctionVersion' \
+  --output text | cat)
+
+PRODUCTION_SHA=$(aws lambda get-function \
+  --function-name "${FUNCTION_NAME}" \
+  --qualifier "${PRODUCTION_VERSION}" \
+  --region "${REGION}" \
+  --query 'Configuration.CodeSha256' \
+  --output text | cat)
+
+# Get $LATEST SHA
+LATEST_SHA=$(aws lambda get-function \
+  --function-name "${FUNCTION_NAME}" \
+  --qualifier '$LATEST' \
+  --region "${REGION}" \
+  --query 'Configuration.CodeSha256' \
+  --output text | cat)
+
+echo "Production is on version: ${PRODUCTION_VERSION}"
+echo "  SHA: ${PRODUCTION_SHA:0:12}..."
+echo ""
+echo "Staging (\$LATEST):"
+echo "  SHA: ${LATEST_SHA:0:12}..."
+echo ""
+
+if [ "${LATEST_SHA}" = "${PRODUCTION_SHA}" ]; then
+  echo "⚠ Staging and production are running the same code"
+  echo "Nothing to promote"
+  exit 0
+fi
+
+# Build version description
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+
+if [ -n "${DESCRIPTION:-}" ]; then
+  VERSION_DESCRIPTION="${DESCRIPTION} (${GIT_BRANCH}@${GIT_COMMIT})"
+else
+  VERSION_DESCRIPTION="Promote ${GIT_BRANCH}@${GIT_COMMIT} to production"
+fi
+
+read -p "Publish $LATEST and promote to production? (yes/no): " -r
+echo
+if [[ ! $REPLY =~ ^[Yy]es$ ]]; then
+  echo "Promotion cancelled"
+  exit 0
+fi
+
+# Publish $LATEST as a new version
+echo "Publishing \$LATEST as new version..."
+echo "Description: ${VERSION_DESCRIPTION}"
+NEW_VERSION=$(aws lambda publish-version \
+  --function-name "${FUNCTION_NAME}" \
+  --description "${VERSION_DESCRIPTION}" \
+  --region "${REGION}" \
+  --query 'Version' \
+  --output text | cat)
+
+echo "Published version: ${NEW_VERSION}"
+
+# Update production alias to the new version
+echo "Updating production alias to version ${NEW_VERSION}..."
+aws lambda update-alias \
+  --function-name "${FUNCTION_NAME}" \
+  --name "production" \
+  --function-version "${NEW_VERSION}" \
+  --region "${REGION}" \
+  --output json > /dev/null
+
+echo ""
+echo "✓ Successfully promoted version ${NEW_VERSION} to production"
+echo ""
+echo "Previous production version ${PRODUCTION_VERSION} is still available for rollback"
