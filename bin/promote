@@ -62,7 +62,7 @@ else
   VERSION_DESCRIPTION="Promote ${GIT_BRANCH}@${GIT_COMMIT} to production"
 fi
 
-read -p "Publish $LATEST and promote to production? (yes/no): " -r
+read -p "Publish \$LATEST and promote to production? (yes/no): " -r
 echo
 if [[ ! $REPLY =~ ^[Yy]es$ ]]; then
   echo "Promotion cancelled"
