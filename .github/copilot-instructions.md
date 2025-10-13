@@ -57,6 +57,8 @@ Tests mock AWS SDK and Sharp to focus on business logic:
 3. **Deploy updates**: Use `./bin/deploy` script (builds + uploads)
 4. **Test endpoints**: Use event JSON files in `events/` directory
 5. **Live testing**: Use `https://ltgchi86r4.execute-api.us-east-1.amazonaws.com` as the host for testing deployed functions
+  - **Staging route**: `/default/staging/resize` (feature branches)
+  - **Production route**: `/default/resize` (stable releases)
 
 ## Environment Requirements
 
