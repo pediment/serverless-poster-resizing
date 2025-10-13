@@ -138,7 +138,7 @@ describe('Handler Integration Tests', () => {
       
       const event = {
         queryStringParameters: {
-          key: 'Posters/12:18/canvas/1.5/+1400/canvas-poster.jpg'
+          key: 'Posters/12:18/canvas/1.5/1400px/canvas-poster.jpg'
         }
       };
 
@@ -255,7 +255,7 @@ describe('Handler Integration Tests', () => {
 
       const event = {
         queryStringParameters: {
-          key: 'Posters/12:18/canvas/1.5/+50/small-bleed.jpg'
+          key: 'Posters/12:18/canvas/1.5/50px/small-bleed.jpg'
         }
       };
 

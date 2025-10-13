@@ -3,6 +3,6 @@
     "routeKey": "ANY /resize",
     "rawPath": "/default/resize",
     "queryStringParameters": {
-        "key": "Posters/8:10/canvas/1.25/+1400/MiamiDolphins1972PerfectSeason-Poster-Canvas-01.jpg"
+        "key": "Posters/8:10/canvas/1.25/1400px/MiamiDolphins1972PerfectSeason-Poster-Canvas-01.jpg"
     }
 }

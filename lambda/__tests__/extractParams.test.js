@@ -3,7 +3,7 @@
  * 
  * The extractParams function parses different URL patterns to extract:
  * - Basic aspect ratios (GCD form): "Posters/2:3/image.jpg"
- * - Canvas with bleed (actual inches): "Posters/12:18/canvas/1.5/+1400/image.jpg"
+ * - Canvas with bleed (actual inches): "Posters/12:18/canvas/1.5/1400px/image.jpg"
  * - Pass-through: "Posters/image.jpg" (no processing)
  * 
  * Canvas size mappings:
@@ -30,14 +30,12 @@ const { extractParams } = await import('../index.js');
 
 describe('extractParams Function', () => {
   test('should extract canvas parameters with bleed information', () => {
-    const queryString = {
-      key: 'Posters/12:18/canvas/1.5/+1400/OriginalImage.jpg'
-    };
-
-    const result = extractParams(queryString);
+    const result = extractParams({
+      key: 'Posters/12:18/canvas/1.5/1400px/OriginalImage.jpg'
+    });
 
     expect(result).toEqual({
-      key: 'Posters/12:18/canvas/1.5/+1400/OriginalImage.jpg',
+      key: 'Posters/12:18/canvas/1.5/1400px/OriginalImage.jpg',
       canvasWrap: 2, // 1.5 maps to 2
       canvasBleed: '1400',
       originalKey: 'Posters/OriginalImage.jpg',
@@ -57,7 +55,7 @@ describe('extractParams Function', () => {
 
     testCases.forEach(({ size, expectedWrap }) => {
       const queryString = {
-        key: `Posters/12:18/canvas/${size}/+1400/test.jpg`
+        key: `Posters/12:18/canvas/${size}/1400px/test.jpg`
       };
 
       const result = extractParams(queryString);

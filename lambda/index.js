@@ -18,8 +18,8 @@ export const extractParams = (queryString) => {
       originalKey;
 
   // If the key includes canvas size and bleed info, extract it
-  // Example format: Posters/12:18/canvas/1.5/+1400/OriginalKey.jpg
-  if (match = params.key.match(/^(Posters)\/(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)\/canvas\/(\d+(?:\.\d+)?)\/\+(\d+)\/(.*)$/)) {
+  // Example format: Posters/12:18/canvas/1.5/1400px/OriginalKey.jpg
+  if (match = params.key.match(/^(Posters)\/(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)\/canvas\/(\d+(?:\.\d+)?)\/(\d+)px\/(.*)$/)) {
     [ prefix, aspectWidth, aspectHeight, canvasSize, canvasBleed, originalKey ] = match.slice(1);
     switch(canvasSize) {
       case '0.75': canvasWrap = 1; break;
