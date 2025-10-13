@@ -1,0 +1,9 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "npm test": true,
+    "npm run test:coverage": true,
+    "bin/deploy": true,
+    "sam local invoke": true,
+    "make dist": true
+  }
+}
