@@ -4,6 +4,8 @@
     "npm run test:coverage": true,
     "bin/deploy": true,
     "sam local invoke": true,
-    "make dist": true
+    "make dist": true,
+    "curl": null,
+    "/^curl.*resize\\?key=.*$/": true
   }
 }
