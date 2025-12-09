@@ -4,7 +4,7 @@ import Sharp from "sharp";
 const s3Client = new S3Client();
 const BUCKET = process.env.BUCKET;
 const URL = process.env.URL;
-const CANVAS_DPI = 300; // DPI for resizing
+const CANVAS_DPI = 200; // DPI for resizing
 
 export const extractParams = (queryString) => {
   let params = {...queryString},

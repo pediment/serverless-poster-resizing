@@ -50,8 +50,8 @@ describe('resize Function', () => {
     await resize(mockImage, opts);
 
     expect(mockImage.resize).toHaveBeenCalledWith({
-      width: 4800, // 16 * 300 DPI
-      height: 6600, // 22 * 300 DPI
+      width: 3200, // 16 * 200 DPI
+      height: 4400, // 22 * 200 DPI
       withoutEnlargement: true
     });
   });
@@ -118,8 +118,8 @@ describe('resize Function', () => {
     await resize(mockImage, opts);
 
     expect(mockImage.resize).toHaveBeenCalledWith({
-      width: 3750, // Math.round(12.5 * 300)
-      height: 5025, // Math.round(16.75 * 300)
+      width: 2500, // Math.round(12.5 * 200)
+      height: 3350, // Math.round(16.75 * 200)
       withoutEnlargement: true
     });
   });
